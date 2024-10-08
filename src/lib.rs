@@ -1,5 +1,6 @@
 use pyo3::prelude::*;
 use pyo3::types::{PyList, PyTuple};
+use pyo3::exceptions::PyValueError;
 
 struct DecodingResult {
     value: i64,
@@ -108,12 +109,15 @@ fn encode(data: &PyList) -> PyResult<String> {
 
     for point_object in data.iter() {
         let point_data = point_object.downcast::<PyTuple>()?;
-        let timestamp: f64 = point_data[0].extract::<f64>()?;
-        let timestamp_diff: i64 = timestamp.round() as i64 - prev_timestamp;
+        let timestamp: i64 = point_data[0].extract::<f64>()?.round() as i64;
+        let timestamp_diff: i64 = timestamp - prev_timestamp;
         if is_first {
             output.append(&mut encode_signed_number(timestamp_diff));
             is_first = false;
         }else {
+            if timestamp_diff < 0 {
+                return Err(PyValueError::new_err("Input data is not sorted"));
+            }
             output.append(&mut encode_unsigned_number(timestamp_diff));
         }
         
