@@ -66,11 +66,9 @@ fn decode(input: String) -> PyResult<Vec<(i64, f64, f64)>> {
     let encoded_length: u32 = encoded.len() as u32;
     let mut output: Vec<(i64, f64, f64)> = Vec::new();
     
-    let mut is_first: bool = true;
-
     while bytes_consumed < encoded_length {
         for i in 0..3 {
-            if i == 0 && !is_first {
+            if i == 0 && bytes_consumed != 0 {
                 decoding_result = decode_unsigned_value_from_string(encoded, bytes_consumed);
             } else {
                 decoding_result = decode_signed_value_from_string(encoded, bytes_consumed);
@@ -80,7 +78,6 @@ fn decode(input: String) -> PyResult<Vec<(i64, f64, f64)>> {
             vals[i] = new_val;
             prev_vals[i] = new_val;
         }
-        is_first = false;
         output.push(
             (
                 vals[0],
