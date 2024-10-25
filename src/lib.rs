@@ -57,10 +57,9 @@ fn encode_signed_number(num: i64) -> Vec<u8> {
 const YEAR2010: i64 = 1262304000;
 
 #[pyfunction]
-fn decode(input: String) -> PyResult<Vec<(i64, f64, f64)>> {    
-    let mut timestamp: i64 = YEAR2010;
-    let mut latitude: i64 = 0;
-    let mut longitude: i64 = 0;
+fn decode(input: String) -> PyResult<Vec<(i64, f64, f64)>> {
+    let mut prev_vals: [i64; 3] = [YEAR2010, 0, 0];
+    let mut vals: [i64; 3] = [0, 0, 0];
     let mut bytes_consumed: u32 = 0;
     let mut decoding_result: DecodingResult;
     let encoded: &[u8] = &input.as_bytes();
@@ -70,28 +69,23 @@ fn decode(input: String) -> PyResult<Vec<(i64, f64, f64)>> {
     let mut is_first: bool = true;
 
     while bytes_consumed < encoded_length {
-        if is_first {
-            decoding_result = decode_signed_value_from_string(encoded, bytes_consumed);
-            is_first = false
-        } else {
-            decoding_result = decode_unsigned_value_from_string(encoded, bytes_consumed);
+        for i in 0..3 {
+            if i == 0 && !is_first {
+                decoding_result = decode_unsigned_value_from_string(encoded, bytes_consumed);
+            } else {
+                decoding_result = decode_signed_value_from_string(encoded, bytes_consumed);
+            }
+            bytes_consumed = decoding_result.offset;
+            let new_val = prev_vals[i] + decoding_result.value;
+            vals[i] = new_val;
+            prev_vals[i] = new_val;
         }
-        timestamp += decoding_result.value;
-        bytes_consumed = decoding_result.offset;
-        
-        decoding_result = decode_signed_value_from_string(encoded, bytes_consumed);
-        latitude += decoding_result.value;
-        bytes_consumed = decoding_result.offset;
-
-        decoding_result = decode_signed_value_from_string(encoded, bytes_consumed);
-        longitude += decoding_result.value;
-        bytes_consumed = decoding_result.offset;
-
+        is_first = false;
         output.push(
             (
-                timestamp as i64,
-                (latitude as f64) / 1e5,
-                (longitude as f64) / 1e5
+                vals[0],
+                (vals[1] as f64) / 1e5,
+                (vals[2] as f64) / 1e5
             )
         );
     }
@@ -114,7 +108,7 @@ fn encode(data: &PyList) -> PyResult<String> {
         if is_first {
             output.append(&mut encode_signed_number(timestamp_diff));
             is_first = false;
-        }else {
+        } else {
             if timestamp_diff < 0 {
                 return Err(PyValueError::new_err("Input data is not sorted"));
             }
