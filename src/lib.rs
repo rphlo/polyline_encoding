@@ -58,8 +58,7 @@ const YEAR2010: i64 = 1262304000;
 
 #[pyfunction]
 fn decode(input: String) -> PyResult<Vec<(i64, f64, f64)>> {
-    let mut prev_vals: [i64; 3] = [YEAR2010, 0, 0];
-    let mut vals: [i64; 3] = [0, 0, 0];
+    let mut vals: [i64; 3] = [YEAR2010, 0, 0];
     let mut bytes_consumed: u32 = 0;
     let mut decoding_result: DecodingResult;
     let encoded: &[u8] = &input.as_bytes();
@@ -74,9 +73,7 @@ fn decode(input: String) -> PyResult<Vec<(i64, f64, f64)>> {
                 decoding_result = decode_signed_value_from_string(encoded, bytes_consumed);
             }
             bytes_consumed = decoding_result.offset;
-            let new_val = prev_vals[i] + decoding_result.value;
-            vals[i] = new_val;
-            prev_vals[i] = new_val;
+            vals[i] += decoding_result.value;
         }
         output.push(
             (
